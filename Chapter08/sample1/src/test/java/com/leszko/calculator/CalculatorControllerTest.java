@@ -7,7 +7,9 @@ import java.lang.reflect.Field;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-
+/**
+ * Unit tests for the calculator controller.
+ */
 public class CalculatorControllerTest {
 
     @Test
