@@ -1,102 +1,56 @@
 pipeline {
-// Provisioned via the Docker cloud in Jenkins; comes up with the
-// 'docker-agent' label. Satisfies "must run in an agent container".
-agent {
-label 'docker-agent'
+    agent {
+        label 'docker-agent'
+    }
+    triggers {
+        pollSCM('* * * * *')
+    }
+    options {
+        skipDefaultCheckout(true)
+    }
+    stages {
+        stage('Checkout and prepare') {
+            steps {
+                checkout scm
+                dir('Chapter08/sample1') {
+                    sh 'chmod +x gradlew'
+                }
+            }
+        }
+        stage('Unit tests') {
+            steps {
+                dir('Chapter08/sample1') {
+                    sh './gradlew test'
+                }
+            }
+        }
+        stage('Code coverage') {
+            when {
+                changeset '**/*.java'
+            }
+            steps {
+                dir('Chapter08/sample1') {
+                    sh './gradlew jacocoTestReport jacocoTestCoverageVerification'
+                }
+            }
+        }
+        stage('Checkstyle') {
+            when {
+                changeset '**/*.java'
+            }
+            steps {
+                dir('Chapter08/sample1') {
+                    sh './gradlew checkstyleMain checkstyleTest --continue'
+                }
+            }
+        }
+    }
+    post {
+        success {
+            echo 'pipeline ran perfectly'
+        }
+        failure {
+            echo 'pipeline failure'
+        }
+    }
 }
- 
-// Polling trigger (notes pg 5). The UI "Poll SCM" checkbox is what
-// guarantees the FIRST poll fires immediately; this block documents the
-// same schedule in code and takes effect from the first build onward.
-triggers {
-pollSCM('* * * * *') // every minute, for testing
-}
- 
-options {
-// We do our own checkout below so there is exactly ONE checkout that
-// records the changelog the `changeset` condition reads.
-skipDefaultCheckout(true)
-}
- 
-stages {
- 
-// ALWAYS runs. `checkout scm` uses the repo/branch/credentials
-// configured in the job and records the changelog for `changeset`.
-stage('Checkout and prepare') {
-steps {
-checkout scm
-dir('Chapter08/sample1') {
-sh 'chmod +x gradlew'
-}
-}
-}
- 
-// ALWAYS runs — "all other tests from last week", regardless of *.java.
-stage('Unit tests') {
-steps {
-dir('Chapter08/sample1') {
-sh './gradlew test'
-}
-}
-}
- 
-// CONDITIONAL — only when a *.java file was modified in this change.
-stage('Code coverage') {
-when {
-changeset '**/*.java'
-}
-steps {
-dir('Chapter08/sample1') {
-sh './gradlew jacocoTestReport jacocoTestCoverageVerification'
-}
-}
-post {
-always {
-publishHTML target: [
-allowMissing: true,
-alwaysLinkToLastBuild: true,
-keepAll: true,
-reportDir: 'Chapter08/sample1/build/reports/jacoco/test/html',
-reportFiles: 'index.html',
-reportName: 'JaCoCo Coverage'
-]
-}
-}
-}
- 
-// CONDITIONAL — only when a *.java file was modified in this change.
-stage('Checkstyle') {
-when {
-changeset '**/*.java'
-}
-steps {
-dir('Chapter08/sample1') {
-sh './gradlew checkstyleMain checkstyleTest --continue'
-}
-}
-post {
-always {
-publishHTML target: [
-allowMissing: true,
-alwaysLinkToLastBuild: true,
-keepAll: true,
-reportDir: 'Chapter08/sample1/build/reports/checkstyle',
-reportFiles: 'main.html',
-reportName: 'Checkstyle'
-]
-}
-}
-}
-}
- 
-// Final status (exercise requirement).
-post {
-success {
-echo 'pipeline ran perfectly'
-}
-failure {
-echo 'pipeline failure'
-}
-}
-}
- 
