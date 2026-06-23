@@ -1,4 +1,5 @@
 package com.leszko.calculator;
+// week5 change to trigger code coverage and checkstyle
 
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
