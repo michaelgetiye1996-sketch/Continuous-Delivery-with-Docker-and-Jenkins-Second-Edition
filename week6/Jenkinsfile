@@ -1,0 +1,53 @@
+pipeline {
+    agent {
+        label 'docker-agent'
+    }
+
+    stages {
+
+        stage('Check branch is valid') {
+            steps {
+                script {
+                    if (env.BRANCH_NAME != 'master' && !env.BRANCH_NAME.contains('feature')) {
+                        error("Branch '${env.BRANCH_NAME}' is not allowed. Only 'master' or branches containing 'feature' are permitted.")
+                    }
+                }
+            }
+        }
+
+        stage('Unit tests') {
+            when {
+                anyOf {
+                    branch 'master'
+                    expression { env.BRANCH_NAME.contains('feature') }
+                }
+            }
+            steps {
+                dir('Chapter08/sample1') {
+                    sh 'chmod +x gradlew'
+                    sh './gradlew test'
+                }
+            }
+        }
+
+        stage('Code coverage') {
+            when {
+                branch 'master'
+            }
+            steps {
+                dir('Chapter08/sample1') {
+                    sh './gradlew jacocoTestReport jacocoTestCoverageVerification'
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'pipeline ran perfectly'
+        }
+        failure {
+            echo 'pipeline failure'
+        }
+    }
+}
